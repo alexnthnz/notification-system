@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/lib/pq"
 	"github.com/alexnthnz/notification-system/internal/config"
+	_ "github.com/lib/pq"
 )
 
 // PostgresDB wraps sql.DB for PostgreSQL operations

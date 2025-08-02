@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	
+
+	"github.com/alexnthnz/notification-system/internal/channels"
 	"github.com/alexnthnz/notification-system/internal/config"
 	"github.com/alexnthnz/notification-system/internal/database"
+	"github.com/alexnthnz/notification-system/internal/monitoring"
 	"github.com/alexnthnz/notification-system/internal/notification"
 	"github.com/alexnthnz/notification-system/internal/queue"
-	"github.com/alexnthnz/notification-system/internal/channels"
-	"github.com/alexnthnz/notification-system/internal/monitoring"
 )
 
 func main() {

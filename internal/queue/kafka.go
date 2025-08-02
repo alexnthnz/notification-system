@@ -7,8 +7,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/segmentio/kafka-go"
 	"github.com/alexnthnz/notification-system/internal/config"
+	"github.com/segmentio/kafka-go"
 )
 
 // NotificationMessage represents a message in the notification queue

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	"github.com/alexnthnz/notification-system/internal/config"
+	"github.com/redis/go-redis/v9"
 )
 
 // RedisClient wraps redis.Client for caching operations

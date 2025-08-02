@@ -2,6 +2,7 @@ package channels
 
 import (
 	"context"
+
 	"github.com/alexnthnz/notification-system/internal/notification"
 )
 

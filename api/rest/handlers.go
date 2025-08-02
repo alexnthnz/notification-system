@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/go-playground/validator/v10"
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
-	
-	"github.com/alexnthnz/notification-system/internal/notification"
+
 	"github.com/alexnthnz/notification-system/internal/monitoring"
+	"github.com/alexnthnz/notification-system/internal/notification"
 )
 
 // Handler holds dependencies for REST API handlers
