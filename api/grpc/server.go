@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"go.uber.org/zap"
 
 	pb "github.com/alexnthnz/notification-system/api/proto/gen"
-	"github.com/alexnthnz/notification-system/internal/notification"
 	"github.com/alexnthnz/notification-system/internal/monitoring"
+	"github.com/alexnthnz/notification-system/internal/notification"
 )
 
 // Server implements the NotificationService gRPC server
