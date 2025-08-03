@@ -10,6 +10,7 @@ The Notification Service is a scalable, high-performance system built in Go to d
 - **Reliability**: Ensures delivery with retry mechanisms and fault-tolerant design.
 - **Extensibility**: Easily integrates new notification channels or providers.
 - **Monitoring and Analytics**: Tracks delivery status and system metrics.
+- **Dual API Support**: Both REST and gRPC APIs for maximum flexibility.
 
 ## Architecture
 The system follows a microservices-based architecture with the following components:
@@ -23,7 +24,7 @@ The system follows a microservices-based architecture with the following compone
 
 ## Data Flow
 
-1. Clients send notification requests to the API Gateway via REST.
+1. Clients send notification requests to the API Gateway via REST or gRPC.
 2. The Notification Service validates requests, stores metadata, and publishes to a message queue.
 3. Channel Services consume queue messages and send notifications via third-party providers (e.g., SendGrid for email, Twilio for SMS, Firebase for push).
 4. Delivery status is updated in the database, and metrics are sent to the Monitoring Service.
@@ -31,7 +32,7 @@ The system follows a microservices-based architecture with the following compone
 ## Technologies Used
 
 - **Language**: Go (1.23+)
-- **API**: REST with Gorilla Mux
+- **APIs**: REST with Gorilla Mux + gRPC with Protocol Buffers
 - **Message Queue**: Apache Kafka
 - **Database**: PostgreSQL for metadata, Redis for caching
 - **Channel Services**: Go with HTTP clients for third-party API calls
@@ -42,7 +43,7 @@ The system follows a microservices-based architecture with the following compone
 ```
 notification-system/
 ├── cmd/
-│   ├── api/               # Main API server
+│   ├── api/               # Main API server (REST + gRPC)
 │   ├── email-service/     # Email channel service
 │   ├── sms-service/       # SMS channel service
 │   ├── push-service/      # Push notification service
@@ -55,9 +56,16 @@ notification-system/
 │   ├── monitoring/        # Prometheus metrics
 ├── api/
 │   ├── proto/             # gRPC protobuf definitions
-│   ├── rest/              # REST API handlers
+│   │   └── gen/           # Generated protobuf code
+│   ├── grpc/              # gRPC service implementation
+│   └── rest/              # REST API handlers
+├── examples/
+│   └── grpc-client/       # Example gRPC client
+├── scripts/
+│   └── generate-proto.sh  # Protobuf code generation
 ├── Dockerfile             # Docker configuration
 ├── docker-compose.yml     # Multi-service orchestration
+├── Makefile              # Development commands
 ├── prometheus.yml         # Prometheus configuration
 ├── config.env.example     # Environment configuration example
 ├── go.mod                 # Go module dependencies
@@ -69,13 +77,22 @@ notification-system/
 ### Prerequisites:
 - Go 1.23+
 - Docker and Docker Compose
+- Protocol Buffers compiler (`protoc`)
 - Accounts for third-party providers (SendGrid, Twilio, Firebase)
 
 ### Installation:
 ```bash
 git clone https://github.com/your-repo/notification-system.git
 cd notification-system
-go mod tidy
+
+# Install development dependencies
+make dev-deps
+
+# Generate protobuf code
+make proto
+
+# Build all services
+make build
 ```
 
 ### Configuration:
@@ -103,13 +120,13 @@ FIREBASE_CREDENTIALS_PATH=/path/to/firebase-credentials.json
 #### Using Docker Compose (Recommended):
 ```bash
 # Start all services including dependencies
-docker-compose up -d
+make docker-up
 
 # View logs
-docker-compose logs -f
+make docker-logs
 
 # Stop all services
-docker-compose down
+make docker-down
 ```
 
 #### Manual Setup:
@@ -118,24 +135,17 @@ docker-compose down
 docker-compose up -d postgres redis kafka
 
 # Start services manually
-go run cmd/api/main.go          # Start API server
-go run cmd/email-service/main.go # Start email service
-go run cmd/sms-service/main.go   # Start SMS service
-go run cmd/push-service/main.go  # Start push service
-```
-
-### Building and Running with Docker:
-```bash
-# Build all services
-docker-compose build
-
-# Start all services
-docker-compose up -d
+make run-api          # Start API server (REST + gRPC)
+make run-email        # Start email service
+make run-sms          # Start SMS service
+make run-push         # Start push service
 ```
 
 ## API Endpoints
 
-### POST /api/v1/notifications
+### REST API (Port 8080)
+
+#### POST /api/v1/notifications
 Create a new notification
 ```json
 {
@@ -148,7 +158,7 @@ Create a new notification
 }
 ```
 
-### GET /api/v1/notifications/{id}
+#### GET /api/v1/notifications/{id}
 Retrieve notification status
 ```json
 {
@@ -163,11 +173,50 @@ Retrieve notification status
 }
 ```
 
-### GET /health
+#### GET /health
 Health check endpoint
 
-### GET /metrics
+#### GET /metrics
 Prometheus metrics endpoint
+
+### gRPC API (Port 9090)
+
+The service exposes a full gRPC API defined in `api/proto/notification.proto`. Key methods include:
+
+- `CreateNotification` - Create a new notification
+- `GetNotification` - Retrieve notification by ID
+- `ListNotifications` - List notifications with filtering
+- `UpdateNotificationStatus` - Update notification status
+- `GetUserPreferences` - Get user notification preferences
+- `UpdateUserPreferences` - Update user preferences
+
+#### Example gRPC Usage:
+```bash
+# Test gRPC API with example client
+make grpc-test
+
+# List available gRPC services
+make grpc-list
+
+# Manual gRPC call with grpcurl
+grpcurl -plaintext -d '{"user_id":"123","channel":"CHANNEL_EMAIL","recipient":"test@example.com","subject":"Test","body":"Hello gRPC!"}' localhost:9090 notification.v1.NotificationService/CreateNotification
+```
+
+## Development Commands
+
+The project includes a comprehensive Makefile for development:
+
+```bash
+make help           # Show all available commands
+make build          # Build all services
+make proto          # Generate protobuf code
+make test           # Run tests
+make lint           # Run linter
+make docker-up      # Start with Docker Compose
+make docker-down    # Stop all services
+make grpc-test      # Test gRPC API
+make example-rest   # Test REST API
+```
 
 ## Scaling Considerations
 
@@ -176,6 +225,7 @@ Prometheus metrics endpoint
 - **Queue Partitioning**: Uses Kafka partitions for load distribution.
 - **Database Optimization**: PostgreSQL with proper indexing and connection pooling.
 - **Caching**: Redis for user preferences and rate limiting.
+- **API Gateway**: Support for both REST and gRPC protocols.
 
 ## Monitoring and Logging
 
@@ -183,11 +233,13 @@ Prometheus metrics endpoint
 - **Dashboards**: Grafana visualizes system performance.
 - **Logging**: Structured logging with Zap to stdout.
 - **Health Checks**: Each service exposes health endpoints.
+- **gRPC Reflection**: Enabled for development tools.
 
 ## Service Architecture
 
-### API Service (Port 8080)
-- REST API for creating and retrieving notifications
+### API Service (Ports 8080 + 9090)
+- **REST API** (8080): HTTP endpoints for web clients
+- **gRPC API** (9090): High-performance binary protocol for service-to-service communication
 - Validates requests and publishes to Kafka queue
 - Manages user preferences and rate limiting
 
@@ -205,6 +257,37 @@ Prometheus metrics endpoint
 - Consumes push notifications from Kafka
 - Integrates with Firebase Cloud Messaging
 - Supports both Android and iOS devices
+
+## gRPC Protocol Buffer Schema
+
+The gRPC API is defined using Protocol Buffers with the following key message types:
+
+```protobuf
+// Create notification request
+message CreateNotificationRequest {
+  string user_id = 1;
+  Channel channel = 2;      // EMAIL, SMS, PUSH
+  string recipient = 3;
+  string subject = 4;
+  string body = 5;
+  Priority priority = 6;    // LOW, MEDIUM, HIGH
+  google.protobuf.Timestamp scheduled_at = 7;
+  map<string, string> metadata = 10;
+}
+
+// Notification entity
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  Channel channel = 3;
+  string recipient = 4;
+  string subject = 5;
+  string body = 6;
+  NotificationStatus status = 7;  // PENDING, SENT, DELIVERED, FAILED
+  google.protobuf.Timestamp created_at = 14;
+  // ... additional fields
+}
+```
 
 ## Database Schema
 
@@ -242,6 +325,8 @@ Prometheus metrics endpoint
 - Add notification templates with variables
 - Implement webhook delivery confirmations
 - Add notification scheduling and batching
+- Add authentication and authorization to gRPC API
+- Implement streaming APIs for real-time updates
 
 ## Contributing
 Contributions are welcome! Follow these steps:

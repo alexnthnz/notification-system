@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package notification.v1;
+
+option go_package = "github.com/alexnthnz/notification-system/api/proto/gen/notification/v1;notificationv1";
+
+import "google/protobuf/timestamp.proto";
+
+// NotificationService provides methods for managing notifications
+service NotificationService {
+  // CreateNotification creates a new notification
+  rpc CreateNotification(CreateNotificationRequest) returns (CreateNotificationResponse);
+  
+  // GetNotification retrieves a notification by ID
+  rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse);
+  
+  // ListNotifications lists notifications for a user
+  rpc ListNotifications(ListNotificationsRequest) returns (ListNotificationsResponse);
+  
+  // UpdateNotificationStatus updates the status of a notification
+  rpc UpdateNotificationStatus(UpdateNotificationStatusRequest) returns (UpdateNotificationStatusResponse);
+  
+  // GetUserPreferences retrieves user notification preferences
+  rpc GetUserPreferences(GetUserPreferencesRequest) returns (GetUserPreferencesResponse);
+  
+  // UpdateUserPreferences updates user notification preferences
+  rpc UpdateUserPreferences(UpdateUserPreferencesRequest) returns (UpdateUserPreferencesResponse);
+}
+
+// Channel represents the notification delivery channel
+enum Channel {
+  CHANNEL_UNSPECIFIED = 0;
+  CHANNEL_EMAIL = 1;
+  CHANNEL_SMS = 2;
+  CHANNEL_PUSH = 3;
+}
+
+// NotificationStatus represents the status of a notification
+enum NotificationStatus {
+  NOTIFICATION_STATUS_UNSPECIFIED = 0;
+  NOTIFICATION_STATUS_PENDING = 1;
+  NOTIFICATION_STATUS_SENT = 2;
+  NOTIFICATION_STATUS_DELIVERED = 3;
+  NOTIFICATION_STATUS_FAILED = 4;
+  NOTIFICATION_STATUS_CANCELLED = 5;
+}
+
+// Priority represents the notification priority
+enum Priority {
+  PRIORITY_UNSPECIFIED = 0;
+  PRIORITY_LOW = 1;
+  PRIORITY_MEDIUM = 2;
+  PRIORITY_HIGH = 3;
+}
+
+// Frequency represents how often notifications should be sent
+enum Frequency {
+  FREQUENCY_UNSPECIFIED = 0;
+  FREQUENCY_IMMEDIATE = 1;
+  FREQUENCY_HOURLY = 2;
+  FREQUENCY_DAILY = 3;
+}
+
+// CreateNotificationRequest represents a request to create a notification
+message CreateNotificationRequest {
+  string user_id = 1;
+  Channel channel = 2;
+  string recipient = 3;
+  string subject = 4;
+  string body = 5;
+  Priority priority = 6;
+  google.protobuf.Timestamp scheduled_at = 7;
+  string template = 8;
+  map<string, string> variables = 9;
+  map<string, string> metadata = 10;
+}
+
+// CreateNotificationResponse represents the response for creating a notification
+message CreateNotificationResponse {
+  string id = 1;
+  NotificationStatus status = 2;
+  string message = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+// GetNotificationRequest represents a request to get a notification
+message GetNotificationRequest {
+  string id = 1;
+}
+
+// GetNotificationResponse represents the response for getting a notification
+message GetNotificationResponse {
+  Notification notification = 1;
+}
+
+// ListNotificationsRequest represents a request to list notifications
+message ListNotificationsRequest {
+  string user_id = 1;
+  Channel channel = 2;
+  NotificationStatus status = 3;
+  int32 page_size = 4;
+  string page_token = 5;
+}
+
+// ListNotificationsResponse represents the response for listing notifications
+message ListNotificationsResponse {
+  repeated Notification notifications = 1;
+  string next_page_token = 2;
+  int32 total_count = 3;
+}
+
+// UpdateNotificationStatusRequest represents a request to update notification status
+message UpdateNotificationStatusRequest {
+  string id = 1;
+  NotificationStatus status = 2;
+  string external_id = 3;
+  string error_message = 4;
+}
+
+// UpdateNotificationStatusResponse represents the response for updating notification status
+message UpdateNotificationStatusResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// GetUserPreferencesRequest represents a request to get user preferences
+message GetUserPreferencesRequest {
+  string user_id = 1;
+}
+
+// GetUserPreferencesResponse represents the response for getting user preferences
+message GetUserPreferencesResponse {
+  repeated UserPreference preferences = 1;
+}
+
+// UpdateUserPreferencesRequest represents a request to update user preferences
+message UpdateUserPreferencesRequest {
+  string user_id = 1;
+  repeated UserPreference preferences = 2;
+}
+
+// UpdateUserPreferencesResponse represents the response for updating user preferences
+message UpdateUserPreferencesResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Notification represents a notification entity
+message Notification {
+  string id = 1;
+  string user_id = 2;
+  Channel channel = 3;
+  string recipient = 4;
+  string subject = 5;
+  string body = 6;
+  NotificationStatus status = 7;
+  string external_id = 8;
+  string error_message = 9;
+  int32 retry_count = 10;
+  google.protobuf.Timestamp scheduled_at = 11;
+  google.protobuf.Timestamp sent_at = 12;
+  google.protobuf.Timestamp delivered_at = 13;
+  google.protobuf.Timestamp created_at = 14;
+  google.protobuf.Timestamp updated_at = 15;
+  map<string, string> metadata = 16;
+}
+
+// UserPreference represents user notification preferences
+message UserPreference {
+  string id = 1;
+  string user_id = 2;
+  Channel channel = 3;
+  bool enabled = 4;
+  Frequency frequency = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}

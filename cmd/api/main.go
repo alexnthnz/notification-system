@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -11,7 +12,11 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
+	grpcapi "github.com/alexnthnz/notification-system/api/grpc"
+	pb "github.com/alexnthnz/notification-system/api/proto/gen"
 	"github.com/alexnthnz/notification-system/api/rest"
 	"github.com/alexnthnz/notification-system/internal/config"
 	"github.com/alexnthnz/notification-system/internal/database"
@@ -75,7 +80,7 @@ func main() {
 	router := handler.SetupRoutes()
 
 	// Create HTTP server
-	server := &http.Server{
+	httpServer := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.API.Host, cfg.API.Port),
 		Handler:      router,
 		ReadTimeout:  15 * time.Second,
@@ -83,11 +88,35 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Start server in a goroutine
+	// Start HTTP server in a goroutine
 	go func() {
-		logger.Info("Starting HTTP server", zap.String("addr", server.Addr))
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", zap.Error(err))
+		logger.Info("Starting HTTP server", zap.String("addr", httpServer.Addr))
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Fatal("Failed to start HTTP server", zap.Error(err))
+		}
+	}()
+
+	// Initialize gRPC server
+	grpcServer := grpc.NewServer()
+	grpcHandler := grpcapi.NewServer(notificationService, metrics, logger)
+	
+	// Register the notification service
+	pb.RegisterNotificationServiceServer(grpcServer, grpcHandler)
+	
+	// Enable reflection for grpcurl and other tools
+	reflection.Register(grpcServer)
+
+	// Start gRPC server in a goroutine
+	go func() {
+		grpcAddr := fmt.Sprintf("%s:%d", cfg.API.Host, cfg.API.GRPCPort)
+		listener, err := net.Listen("tcp", grpcAddr)
+		if err != nil {
+			logger.Fatal("Failed to listen for gRPC", zap.Error(err))
+		}
+
+		logger.Info("Starting gRPC server", zap.String("addr", grpcAddr))
+		if err := grpcServer.Serve(listener); err != nil {
+			logger.Fatal("Failed to start gRPC server", zap.Error(err))
 		}
 	}()
 
@@ -117,9 +146,13 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		logger.Error("Server forced to shutdown", zap.Error(err))
+	// Shutdown HTTP server
+	if err := httpServer.Shutdown(ctx); err != nil {
+		logger.Error("HTTP server forced to shutdown", zap.Error(err))
 	}
 
-	logger.Info("Server exited")
+	// Shutdown gRPC server
+	grpcServer.GracefulStop()
+
+	logger.Info("Servers exited")
 }
